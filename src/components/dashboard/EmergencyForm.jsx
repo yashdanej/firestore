@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { changeText } from '../../Utils';
-import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
+import { useJsApiLoader, Autocomplete, DistanceMatrixService } from '@react-google-maps/api';
 
 const EmergencyForm = () => {
     const [request, setRequest] = useState({
@@ -13,7 +13,7 @@ const EmergencyForm = () => {
     });
 
     const [station, setStation] = useState(null);
-
+    const [loading, setLoading] = useState(false);
     const { isLoaded } = useJsApiLoader({
         googleMapsApiKey: "AIzaSyCs7CfC6OxGtlOaD7sjHUXdr0Xzp_hQiMU",
         libraries: ['places']
@@ -25,17 +25,24 @@ const EmergencyForm = () => {
     const handleAddressPlaceChanged = async () => {
         const place = addressAutocompleteRef.current.getPlace();
         if (place.geometry) {
-            const address = place.formatted_address;
-            setRequest(prevRequest => ({
-                ...prevRequest,
-                address
-            }));
-            const location = {
-                lat: place.geometry.location.lat(),
-                lng: place.geometry.location.lng()
-            };
-            console.log("location", location);
-            await findNearestFireStation(location);
+            try {
+                setLoading(true);
+                const address = place.formatted_address;
+                setRequest(prevRequest => ({
+                    ...prevRequest,
+                    address
+                }));
+                const location = {
+                    lat: place.geometry.location.lat(),
+                    lng: place.geometry.location.lng()
+                };
+                console.log("location", location);
+                await findNearestFireStation(location);
+            } catch (error) {
+                console.log("error", error);
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
@@ -50,186 +57,173 @@ const EmergencyForm = () => {
         }
     };
 
-    const findNearestFireStation = async (location) => {
-        const fireStations = [
-            {
-                "name": "Adajan Fire Station",
-                "officer": "Officer A",
-                "vehicles": [
-                    {
-                        "type": "Engine",
-                        "count": 2
-                    },
-                    {
-                        "type": "Ladder",
-                        "count": 1
-                    }
-                ],
-                "address": "Opp. Star Bazar, Bh. Alishan Enclave, Surat-Hazira Road, Surat, Gujarat, India"
-            },
-            {
-                "name": "Morabhagal Fire Station",
-                "officer": "Officer B",
-                "vehicles": [
-                    {
-                        "type": "Engine",
-                        "count": 3
-                    },
-                    {
-                        "type": "Rescue",
-                        "count": 1
-                    }
-                ],
-                "address": "Opp. Jamia Hussainia Hostel, Morabhal Char Rasta, Morabhagal, Surat, Gujarat, India"
-            },
-            {
-                "name": "Majura Gate Fire Station",
-                "officer": "Officer C",
-                "vehicles": [
-                    {
-                        "type": "Tanker",
-                        "count": 2
-                    }
-                ],
-                "address": "Opp. Jolly Plaza, Besides Old LB Cinema, Majura Gate, Surat, Gujarat, India"
-            },
-            {
-                "name": "Muglisara Fire Station",
-                "officer": "Officer C",
-                "vehicles": [
-                    {
-                        "type": "Tanker",
-                        "count": 2
-                    }
-                ],
-                "address": "Besides SMC HQ, Muglisara Main Road, Surat, Gujarat, India"
-            },
-            {
-                "name": "Navsari Bazar Fire Station",
-                "officer": "Officer C",
-                "vehicles": [
-                    {
-                        "type": "Tanker",
-                        "count": 2
-                    }
-                ],
-                "address": "Navsari Bazar Char Rasta, Opp. Mobin Hospital, Kot Sofil Road, Surat, Gujarat, India"
-            },
-            {
-                "name": "Ganchi Sheri Fire Station",
-                "officer": "Officer C",
-                "vehicles": [
-                    {
-                        "type": "Tanker",
-                        "count": 2
-                    }
-                ],
-                "address": "Navapura, Ganchi Sheri, Surat, Gujarat, India"
-            },
-            {
-                "name": "Kosad Fire Station",
-                "officer": "Officer C",
-                "vehicles": [
-                    {
-                        "type": "Tanker",
-                        "count": 2
-                    }
-                ],
-                "address": "Nr. Kosad Health Center, Opp. Ganeshpura Front, Amroli Sayan Road, Surat	"
-            },
-            {
-                "name": "Katargam Fire Station",
-                "officer": "Officer C",
-                "vehicles": [
-                    {
-                        "type": "Tanker",
-                        "count": 2
-                    }
-                ],
-                "address": "Nr. Dholakia Garden, Katargamgam Road, Surat, Gujarat, India"
-            },
-            {
-                "name": "Kapodra Fire Station",
-                "officer": "Officer C",
-                "vehicles": [
-                    {
-                        "type": "Tanker",
-                        "count": 2
-                    }
-                ],
-                "address": "Nr. Kapodra Police Station, Varachha-Kapodra Road, Surat, Gujarat, India"
-            },
-            {
-                "name": "Pandesara Fire Station",
-                "officer": "Officer C",
-                "vehicles": [
-                    {
-                        "type": "Tanker",
-                        "count": 2
-                    }
-                ],
-                "address": "Pandesara GIDC, Road No. C, Nr. Bank of Baroda, Pandesara, Surat, Gujarat, India"
-            },
-            {
-                "name": "Mandarwaja Fire Station",
-                "officer": "Officer C",
-                "vehicles": [
-                    {
-                        "type": "Tanker",
-                        "count": 2
-                    }
-                ],
-                "address": "Besides Ambedkar Shopping Center, Ring Road, Surat, Gujarat, India"
-            },
-            {
-                "name": "Dumbhal Fire Station",
-                "officer": "Officer C",
-                "vehicles": [
-                    {
-                        "type": "Tanker",
-                        "count": 2
-                    }
-                ],
-                "address": "Nr. South East Zone Office, Model Town Road, Dumbhal, Surat, Gujarat, India"
-            }
-        ];
-    
-        const getDistance = async (loc1, loc2) => {
-            // Implement distance calculation based on addresses (example using Google Distance Matrix API)
-            const origin = loc1.address;
-            const destination = loc2.address;
-            const apiKey = 'AIzaSyCs7CfC6OxGtlOaD7sjHUXdr0Xzp_hQiMU';
-            const url = `https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&key=${apiKey}`;
-            
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-    
-                if (data.status === 'OK') {
-                    const distanceText = data.rows[0].elements[0].distance.text;
-                    const distanceValue = data.rows[0].elements[0].distance.value;
-                    return { text: distanceText, value: distanceValue };
-                } else {
-                    throw new Error('Failed to calculate distance');
+    const fireStations = [
+        {
+            "name": "Adajan Fire Station",
+            "officer": "Officer A",
+            "vehicles": [
+                {
+                    "type": "Engine",
+                    "count": 2
+                },
+                {
+                    "type": "Ladder",
+                    "count": 1
                 }
-            } catch (error) {
-                console.error('Error calculating distance:', error);
-                return null;
-            }
-        };
-    
-        let nearestStation = null;
-        let minDistance = Infinity;
-    
-        for (const station of fireStations) {
-            const distance = await getDistance(location, station);
-            if (distance && distance.value < minDistance) {
-                minDistance = distance.value;
-                nearestStation = station;
-            }
+            ],
+            "address": "Opp. Star Bazar, Bh. Alishan Enclave, Surat-Hazira Road, Surat, Gujarat, India"
+        },
+        {
+            "name": "Morabhagal Fire Station",
+            "officer": "Officer B",
+            "vehicles": [
+                {
+                    "type": "Engine",
+                    "count": 3
+                },
+                {
+                    "type": "Rescue",
+                    "count": 1
+                }
+            ],
+            "address": "Opp. Jamia Hussainia Hostel, Morabhal Char Rasta, Morabhagal, Surat, Gujarat, India"
+        },
+        {
+            "name": "Majura Gate Fire Station",
+            "officer": "Officer C",
+            "vehicles": [
+                {
+                    "type": "Tanker",
+                    "count": 2
+                }
+            ],
+            "address": "Opp. Jolly Plaza, Besides Old LB Cinema, Majura Gate, Surat, Gujarat, India"
+        },
+        {
+            "name": "Muglisara Fire Station",
+            "officer": "Officer C",
+            "vehicles": [
+                {
+                    "type": "Tanker",
+                    "count": 2
+                }
+            ],
+            "address": "Besides SMC HQ, Muglisara Main Road, Surat, Gujarat, India"
+        },
+        {
+            "name": "Navsari Bazar Fire Station",
+            "officer": "Officer C",
+            "vehicles": [
+                {
+                    "type": "Tanker",
+                    "count": 2
+                }
+            ],
+            "address": "Navsari Bazar Char Rasta, Opp. Mobin Hospital, Kot Sofil Road, Surat, Gujarat, India"
+        },
+        {
+            "name": "Ganchi Sheri Fire Station",
+            "officer": "Officer C",
+            "vehicles": [
+                {
+                    "type": "Tanker",
+                    "count": 2
+                }
+            ],
+            "address": "Navapura, Ganchi Sheri, Surat, Gujarat, India"
+        },
+        {
+            "name": "Kosad Fire Station",
+            "officer": "Officer C",
+            "vehicles": [
+                {
+                    "type": "Tanker",
+                    "count": 2
+                }
+            ],
+            "address": "Nr. Kosad Health Center, Opp. Ganeshpura Front, Amroli Sayan Road, Surat	"
+        },
+        {
+            "name": "Katargam Fire Station",
+            "officer": "Officer C",
+            "vehicles": [
+                {
+                    "type": "Tanker",
+                    "count": 2
+                }
+            ],
+            "address": "Nr. Dholakia Garden, Katargamgam Road, Surat, Gujarat, India"
+        },
+        {
+            "name": "Kapodra Fire Station",
+            "officer": "Officer C",
+            "vehicles": [
+                {
+                    "type": "Tanker",
+                    "count": 2
+                }
+            ],
+            "address": "Nr. Kapodra Police Station, Varachha-Kapodra Road, Surat, Gujarat, India"
+        },
+        {
+            "name": "Pandesara Fire Station",
+            "officer": "Officer C",
+            "vehicles": [
+                {
+                    "type": "Tanker",
+                    "count": 2
+                }
+            ],
+            "address": "Pandesara GIDC, Road No. C, Nr. Bank of Baroda, Pandesara, Surat, Gujarat, India"
+        },
+        {
+            "name": "Mandarwaja Fire Station",
+            "officer": "Officer C",
+            "vehicles": [
+                {
+                    "type": "Tanker",
+                    "count": 2
+                }
+            ],
+            "address": "Besides Ambedkar Shopping Center, Ring Road, Surat, Gujarat, India"
+        },
+        {
+            "name": "Dumbhal Fire Station",
+            "officer": "Officer C",
+            "vehicles": [
+                {
+                    "type": "Tanker",
+                    "count": 2
+                }
+            ],
+            "address": "Nr. South East Zone Office, Model Town Road, Dumbhal, Surat, Gujarat, India"
         }
-    
-        console.log("Nearest Fire Station:", nearestStation);
+    ];
+
+    const findNearestFireStation = async (location) => {
+        const service = new window.google.maps.DistanceMatrixService();
+        const destinations = fireStations?.map(station => station.address);
+
+        service.getDistanceMatrix({
+            origins: [location],
+            destinations: destinations,
+            travelMode: 'DRIVING',
+            unitSystem: window.google.maps.UnitSystem.METRIC,
+        }, (response, status) => {
+            if (status === 'OK') {
+                const distances = response?.rows[0]?.elements;
+                const sortedStations = distances?.map((distance, index) => ({
+                    ...fireStations[index],
+                    distance: distance?.distance?.value
+                })).sort((a, b) => a?.distance - b?.distance);
+                
+                setStation(sortedStations);
+                setRequest(prevRequest => ({
+                    ...prevRequest,
+                    nearest: sortedStations[0].name
+                }));
+            }
+        });
     };
 
     useEffect(() => {
@@ -238,6 +232,7 @@ const EmergencyForm = () => {
                 ...prevRequest,
                 nearest: station.name
             }));
+            console.log("station", station);
         }
     }, [station]);
 
@@ -307,12 +302,47 @@ const EmergencyForm = () => {
                             />
                         </div>
                     </div>
-                    <div className='shadow-custom p-5 w-full bg-white'>
+                    <div className='w-full'>
                         {station && (
-                            <div>
-                                <h3>Nearest Fire Station</h3>
-                                <p>Name: {station.name}</p>
-                                <p>Address: {station.address}</p>
+                            <div className='shadow-custom p-5 w-full bg-white'>
+                                <p className='font-bold text-slate-700'>Nearby station</p>
+                                <hr className='my-6' />
+                                {
+                                    station?.map((item) => {
+                                        return (
+                                            <>
+                                                <div
+                                                class="cursor-pointer overflow-hidden relative transition-all duration-500 hover:translate-y-2 w-72 h-44 bg-neutral-50 rounded-lg shadow-xl flex flex-row items-center justify-evenly gap-2 p-2 before:absolute before:w-full hover:before:top-0 before:duration-500 before:-top-1 before:h-1 before:bg-purple-200"
+                                                >
+                                                <svg
+                                                    class="stroke-purple-200 shrink-0"
+                                                    height="50"
+                                                    preserveAspectRatio="xMidYMid meet"
+                                                    viewBox="0 0 100 100"
+                                                    width="50"
+                                                    x="0"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    y="0"
+                                                >
+                                                    <path
+                                                    d="M17.9,60.7A14.3,14.3,0,0,0,32.2,75H64.3a17.9,17.9,0,0,0,0-35.7h-.4a17.8,17.8,0,0,0-35.3,3.6,17.2,17.2,0,0,0,.4,3.9A14.3,14.3,0,0,0,17.9,60.7Z"
+                                                    fill="none"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="8"
+                                                    ></path>
+                                                </svg>
+                                                <div>
+                                                    <span class="font-bold">{item.name}</span>
+                                                    <p class="line-clamp-3">
+                                                    {item.address}
+                                                    </p>
+                                                </div>
+                                                </div>
+                                            </>
+                                        )
+                                    })
+                                }
                             </div>
                         )}
                     </div>
