@@ -1,23 +1,22 @@
 import logo from './logo.svg';
 import './App.css';
+import { Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom';
+import Login from './pages/auth/Login';
+import Navbar from './components/Navbar';
+import Dashboard from './pages/dashboard/Dashboard';
+// import 'dotenv/config';
 
 function App() {
+  const location = useLocation();
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      {
+        location.pathname !== "/login" && <Navbar/>
+      }
+      <Routes>
+        <Route exact path='/login' element={<Login/>} />
+        <Route exact path='/' element={<Dashboard/>} />
+      </Routes>
     </div>
   );
 }
